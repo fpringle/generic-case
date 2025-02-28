@@ -1,25 +1,35 @@
 cabal-version:      3.0
 name:               generic-case
 version:            0.1.0.0
--- synopsis:
--- description:
+synopsis:           Generic case analysis
+description:
+  Generic case analysis in the vein of 'maybe', 'either' and 'bool',
+  using [generics-sop](https://hackage.haskell.org/package/generics-sop).
+
+  See the module documentation in "Data.Case".
+
 license:            BSD-3-Clause
 license-file:       LICENSE
 author:             Frederick Pringle
 maintainer:         freddyjepringle@gmail.com
 copyright:          Copyright(c) Frederick Pringle 2025
 homepage:           https://github.com/fpringle/generic-case
+category:           Generics
 build-type:         Simple
 extra-doc-files:    CHANGELOG.md
+
+source-repository head
+  type:     git
+  location: https://github.com/fpringle/generic-case.git
 
 common warnings
   ghc-options: -Wall
 
 common deps
   build-depends:
-    , base >= 4
-    , sop-core
-    , generics-sop
+    , base >= 4 && < 5
+    , sop-core >= 0.4.0.1 && < 0.6
+    , generics-sop >= 0.4 && < 0.6
 
 common extensions
   default-extensions:
