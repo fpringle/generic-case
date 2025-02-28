@@ -5,14 +5,17 @@ examine a value of that type, and call the relevant function depending on which 
 used to build that type. Examples include 'maybe', 'either' and 'Data.Bool.bool'.
 
 It's often useful to define similar functions on user-defined sum types, which is boring at best
-and error-prone at worst. This module gives us these functions for free, for any type which
+and error-prone at worst. This module gives us these functions for any type which
 implements 'Generic'.
+
+For any single-constructor types, such as tuples, this gives us generic uncurrying without
+any extra effort - see 'tupleR', 'tuple3R'.
 
 == Example
 
 Let's use @These@ from
 [these](https://hackage.haskell.org/package/these) as an example.
-First we need an instance of 'Generic', which we can derive for free.
+First we need an instance of 'Generic', which we can derive.
 
 @
 {\-# LANGUAGE DeriveGeneric #-\}
