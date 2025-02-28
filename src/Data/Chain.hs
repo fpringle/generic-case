@@ -264,12 +264,14 @@ newtype ChainF r xs = ChainF (NP I xs -> r)
 -- | Unwrap a 'ChainF'.
 applyChain :: ChainF r xs -> NP I xs -> r
 applyChain (ChainF f) = f
+{-# INLINE applyChain #-}
 
 {- | Convert a 'ChainF' to a '-.->' function which maps a product of @xs@ to a single value @r@
 (more accurately @'K' r@).
 -}
 chainFn :: ChainF r xs -> (NP I -.-> K r) xs
 chainFn = fn . (K .) . applyChain
+{-# INLINE chainFn #-}
 
 -- | Apply a product of 'ChainF's to a __sum__ of 'NP's.
 applyNSChain :: forall r xss. (SListI xss) => NP (ChainF r) xss -> SOP I xss -> r
