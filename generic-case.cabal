@@ -6,7 +6,7 @@ description:
   Generic case analysis in the vein of 'maybe', 'either' and 'bool',
   using [generics-sop](https://hackage.haskell.org/package/generics-sop).
 
-  See the module documentation in "Data.Case".
+  See the module documentation in "Generics.Case".
 
 license:            BSD-3-Clause
 license-file:       LICENSE

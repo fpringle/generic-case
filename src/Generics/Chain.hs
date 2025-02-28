@@ -40,7 +40,7 @@ f3_ = f3
 @
 
 The 'Chain' family does exactly that. Since GHC can unify these types, we
-can use 'Chain' in our types signatures in "Data.Case" and the user doesn't
+can use 'Chain' in our types signatures in "Generics.Case" and the user doesn't
 have to think about SOP, generics etc.
 
 However, it's hard to manipulate a 'Chain' in a generic way. We want a principled
@@ -87,7 +87,7 @@ it to the user and force them to supply functions that take 'NP's as arguments.
 'Chains' and @'NP' ('ChainF' r)@ iterate on these concepts: 'Chains' is a type-level family represent
 a function of functions, and @'NP' ('ChainF' r)@ is the SOP equivalent. We can convert between them
 using 'toChains' and 'fromChains'. This lets us represent "case analysis" functions like
-'maybe' and 'either' nicely (see "Data.Case"):
+'maybe' and 'either' nicely (see "Generics.Case"):
 
 @
 maybe' :: forall a r. 'ChainsR' '[ '[], '[a]] (Maybe a) r
