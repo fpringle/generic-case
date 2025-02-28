@@ -24,6 +24,7 @@ common deps
 common extensions
   default-extensions:
     FlexibleContexts
+    FlexibleInstances
     LambdaCase
     ScopedTypeVariables
     TypeApplications
@@ -31,6 +32,7 @@ common extensions
     AllowAmbiguousTypes
     TypeFamilies
     TypeOperators
+    UndecidableInstances
 
 library
   import:
@@ -52,6 +54,13 @@ test-suite generic-case-test
   type:             exitcode-stdio-1.0
   hs-source-dirs:   test
   main-is:          Spec.hs
+  other-modules:
+      Util
+      Data.Case.BoolSpec
+      Data.Case.MaybeSpec
+      Data.Case.EitherSpec
+      Data.Case.Custom.NoParamTypeSpec
+      Data.Case.Custom.OneParamTypeSpec
   build-tool-depends:
       hspec-discover:hspec-discover
   ghc-options:      -Wno-orphans
