@@ -89,10 +89,24 @@ module Data.Case
     -- ** Bool
   , boolR
   , boolL
+
+    -- ** Tuples
+  , tupleR
+  , tuple3R
+  , tupleL
+
+    -- ** Lists
+  , listR
+  , listL
+
+    -- ** Non-empty lists
+  , nonEmptyR
+  , nonEmptyL
   )
 where
 
 import Data.Chain
+import Data.List.NonEmpty (NonEmpty)
 import Generics.SOP
 
 {- | Generic case analysis, with the same shape as 'maybe' or 'either' (functions before dataype).
@@ -223,3 +237,37 @@ boolL = gcaseL
 -}
 boolL :: forall a. Bool -> a -> a -> a
 boolL = gcaseL
+
+{- | Case analysis on a list. Same as
+[list](https://hackage.haskell.org/package/extra/docs/Data-List-Extra.html#v:list)
+from @extra@.
+-}
+listR :: forall a r. r -> (a -> [a] -> r) -> [a] -> r
+listR = gcaseR @[a]
+
+-- | Same as 'listR', except the list comes before the case functions.
+listL :: forall a r. [a] -> r -> (a -> [a] -> r) -> r
+listL = gcaseL
+
+-- | Case analysis on a tuple. Interestingly, this is the same as 'uncurry'.
+tupleR :: forall a b r. (a -> b -> r) -> (a, b) -> r
+tupleR = gcaseR @(a, b)
+
+{- | Case analysis on a 3-tuple. Same as
+[uncurry3](https://hackage.haskell.org/package/extra/docs/Data-Tuple-Extra.html#v:uncurry3)
+from @extra@.
+-}
+tuple3R :: forall a b c r. (a -> b -> c -> r) -> (a, b, c) -> r
+tuple3R = gcaseR @(a, b, c)
+
+-- | Same as 'tupleR', except the tuple comes before the case function.
+tupleL :: forall a b r. (a, b) -> (a -> b -> r) -> r
+tupleL = gcaseL
+
+-- | Case analysis on a non-empty list.
+nonEmptyR :: forall a r. (a -> [a] -> r) -> NonEmpty a -> r
+nonEmptyR = gcaseR @(NonEmpty a)
+
+-- | Same as 'nonEmptyR', except the non-empty list comes before the case function.
+nonEmptyL :: forall a r. NonEmpty a -> (a -> [a] -> r) -> r
+nonEmptyL = gcaseL
