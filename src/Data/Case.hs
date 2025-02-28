@@ -1,6 +1,7 @@
 module Data.Case
   ( -- * Generic case analysis
     gcaseR
+  , gcaseR_
   , gcaseL
 
     -- * Examples
@@ -23,6 +24,13 @@ gcaseR ::
 gcaseR = toChains @(Code a) @(a -> r) f
   where
     f c a = applyNSChain c (from a)
+
+gcaseR_ ::
+  forall a r.
+  (Generic a) =>
+  Proxy a ->
+  ChainsR (Code a) a r
+gcaseR_ _ = gcaseR @a @r
 
 gcaseL ::
   forall a r.
