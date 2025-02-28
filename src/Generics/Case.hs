@@ -75,8 +75,10 @@ For a version that takes the datatype before the functions, see 'gcaseL'.
 -}
 module Generics.Case
   ( -- * Generic case analysis
-    gcaseR
+    AnalysisR
+  , gcaseR
   , gcaseR_
+  , AnalysisL
   , gcaseL
 
     -- * Examples
@@ -112,6 +114,32 @@ import Data.List.NonEmpty (NonEmpty)
 import Generics.Chain
 import Generics.SOP
 
+{- | The type of an analysis function on a generic type, in which the type comes after the functions.
+
+You shouldn't ever need to create a function of this type; use 'gcaseR' or 'gcaseR_'.
+
+You can exapand the type in a repl:
+
+@
+ghci> :k! AnalysisR (Maybe a) r
+AnalysisR (Maybe a) r :: *
+= r -> (a -> r) -> Maybe a -> r
+@
+-}
+type AnalysisR a r = ChainsR (Code a) a r
+
+{- | Same as 'AnalysisR', but the type being anlaysed comes before the functions.
+
+You shouldn't ever need to create a function of this type; use 'gcaseL'.
+
+@
+ghci> :k! AnalysisL (Maybe a) r
+AnalysisL (Maybe a) r :: *
+= Maybe a -> r -> (a -> r) -> r
+@
+-}
+type AnalysisL a r = a -> ChainsL (Code a) r
+
 {- | Generic case analysis, with the same shape as 'maybe' or 'either' (functions before dataype).
 
 See the module header for a detailed explanation.
@@ -119,7 +147,7 @@ See the module header for a detailed explanation.
 gcaseR ::
   forall a r.
   (Generic a) =>
-  ChainsR (Code a) a r
+  AnalysisR a r
 gcaseR = toChains @(Code a) @(a -> r) f
   where
     f c a = applyNSChain c (from a)
@@ -142,7 +170,7 @@ gcaseR_ ::
   forall a r.
   (Generic a) =>
   Proxy a ->
-  ChainsR (Code a) a r
+  AnalysisR a r
 gcaseR_ _ = gcaseR @a @r
 
 {- | Simliar to 'gcaseR', except the type being analysed comes before the functions, instead of
@@ -166,8 +194,7 @@ theseL = gcaseL
 gcaseL ::
   forall a r.
   (Generic a) =>
-  a ->
-  ChainsL (Code a) r
+  AnalysisL a r
 gcaseL a = toChains @(Code a) @r f
   where
     f c = applyNSChain c (from a)
