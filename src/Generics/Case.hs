@@ -73,7 +73,7 @@ see 'gcaseR_'.
 
 For a version that takes the datatype before the functions, see 'gcaseL'.
 -}
-module Data.Case
+module Generics.Case
   ( -- * Generic case analysis
     gcaseR
   , gcaseR_
@@ -108,8 +108,8 @@ module Data.Case
   )
 where
 
-import Data.Chain
 import Data.List.NonEmpty (NonEmpty)
+import Generics.Chain
 import Generics.SOP
 
 {- | Generic case analysis, with the same shape as 'maybe' or 'either' (functions before dataype).

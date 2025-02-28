@@ -1,7 +1,7 @@
-module Data.Case.MaybeSpec (spec) where
+module Generics.Case.MaybeSpec (spec) where
 
-import Data.Case
-import Data.Chain
+import Generics.Case
+import Generics.Chain
 import qualified Test.Hspec as H
 import qualified Test.QuickCheck as Q
 import Test.QuickCheck.Function

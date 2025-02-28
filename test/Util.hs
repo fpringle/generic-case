@@ -2,9 +2,9 @@
 
 module Util where
 
-import Data.Chain
 import Data.SOP
 import Data.SOP.NP
+import Generics.Chain
 import qualified Test.Hspec as H
 import qualified Test.Hspec.QuickCheck as H
 import qualified Test.QuickCheck as Q

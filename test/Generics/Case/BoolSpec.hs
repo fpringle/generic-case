@@ -1,7 +1,7 @@
-module Data.Case.BoolSpec (spec) where
+module Generics.Case.BoolSpec (spec) where
 
 import Data.Bool
-import Data.Case
+import Generics.Case
 import qualified Test.Hspec as H
 import qualified Test.QuickCheck as Q
 import Util

@@ -100,7 +100,7 @@ either' = 'either'
 'ChainsL' and 'ChainsR' are just variants of 'Chains' that allow us to decide whether the
 type we're analysing comes before or after the analysis functions.
 -}
-module Data.Chain
+module Generics.Chain
   ( -- * Type functions
     Chain
   , toChain

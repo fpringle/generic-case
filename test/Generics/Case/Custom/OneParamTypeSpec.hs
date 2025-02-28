@@ -1,10 +1,10 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-module Data.Case.Custom.OneParamTypeSpec (spec) where
+module Generics.Case.Custom.OneParamTypeSpec (spec) where
 
-import Data.Case
-import Data.Chain
 import qualified GHC.Generics as G
+import Generics.Case
+import Generics.Chain
 import qualified Generics.SOP as SOP
 import qualified Test.Hspec as H
 import qualified Test.QuickCheck as Q
