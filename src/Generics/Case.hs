@@ -204,6 +204,12 @@ gcaseL a = toChains @(Code a) @r f
 
 {- | 'maybe', implemented using 'gcaseR_'.
 
+Equivalent type signature:
+
+@
+maybeR :: forall a r. 'AnalysisR' (Maybe a) r
+@
+
 The implementation is just:
 
 @
@@ -214,6 +220,12 @@ maybeR :: forall a r. r -> (a -> r) -> Maybe a -> r
 maybeR = gcaseR_ (Proxy :: Proxy (Maybe a))
 
 {- | Same as 'maybeR', except the 'Maybe' comes before the case functions.
+
+Equivalent type signature:
+
+@
+maybeL :: forall a r. AnalysisL (Maybe a) r
+@
 
 The implementation is just:
 
@@ -226,6 +238,12 @@ maybeL = gcaseL
 
 {- | 'either', implemented using 'gcaseR'.
 
+Equivalent type signature:
+
+@
+eitherR :: forall a b r. 'AnalysisR' (Either a b) r
+@
+
 The implementation is just:
 
 @
@@ -236,6 +254,12 @@ eitherR :: forall a b r. (a -> r) -> (b -> r) -> Either a b -> r
 eitherR = gcaseR @(Either a b)
 
 {- | Same as 'eitherR', except the 'Either' comes before the case functions.
+
+Equivalent type signature:
+
+@
+eitherL :: forall a b r. 'AnalysisL' (Either a b) r
+@
 
 The implementation is just:
 
@@ -248,16 +272,28 @@ eitherL = gcaseL
 
 {- | 'Data.Bool.bool', implemented using 'gcaseR'.
 
+Equivalent type signature:
+
+@
+boolR :: forall r. 'AnalysisR' Bool r
+@
+
 The implementation is just:
 
 @
 boolR = gcaseR @Bool
 @
 -}
-boolR :: forall a. a -> a -> Bool -> a
+boolR :: forall r. r -> r -> Bool -> r
 boolR = gcaseR @Bool
 
 {- | Same as 'boolR', except the 'Bool' comes before the case functions.
+
+Equivalent type signature:
+
+@
+boolL :: forall r. 'AnalysisL' Bool r
+@
 
 The implementation is just:
 
@@ -265,39 +301,86 @@ The implementation is just:
 boolL = gcaseL
 @
 -}
-boolL :: forall a. Bool -> a -> a -> a
+boolL :: forall r. Bool -> r -> r -> r
 boolL = gcaseL
 
 {- | Case analysis on a list. Same as
 [list](https://hackage.haskell.org/package/extra/docs/Data-List-Extra.html#v:list)
 from @extra@.
+
+Equivalent type signature:
+
+@
+listR :: forall a r. 'AnalysisR' [a] r
+@
 -}
 listR :: forall a r. r -> (a -> [a] -> r) -> [a] -> r
 listR = gcaseR @[a]
 
--- | Same as 'listR', except the list comes before the case functions.
+{- | Same as 'listR', except the list comes before the case functions.
+
+Equivalent type signature:
+
+@
+listL :: forall a r. 'AnalysisL' [a] r
+@
+-}
 listL :: forall a r. [a] -> r -> (a -> [a] -> r) -> r
 listL = gcaseL
 
--- | Case analysis on a tuple. Interestingly, this is the same as 'uncurry'.
+{- | Case analysis on a tuple. Interestingly, this is the same as 'uncurry'.
+
+Equivalent type signature:
+
+@
+tupleR :: forall a b r. 'AnalysisR' (a, b) r
+@
+-}
 tupleR :: forall a b r. (a -> b -> r) -> (a, b) -> r
 tupleR = gcaseR @(a, b)
 
 {- | Case analysis on a 3-tuple. Same as
 [uncurry3](https://hackage.haskell.org/package/extra/docs/Data-Tuple-Extra.html#v:uncurry3)
 from @extra@.
+
+Equivalent type signature:
+
+@
+tuple3R :: forall a b c r. 'AnalysisR' (a, b, c) r
+@
 -}
 tuple3R :: forall a b c r. (a -> b -> c -> r) -> (a, b, c) -> r
 tuple3R = gcaseR @(a, b, c)
 
--- | Same as 'tupleR', except the tuple comes before the case function.
+{- | Same as 'tupleR', except the tuple comes before the case function.
+
+Equivalent type signature:
+
+@
+tupleL :: forall a b r. 'AnalysisL' (a, b) r
+@
+-}
 tupleL :: forall a b r. (a, b) -> (a -> b -> r) -> r
 tupleL = gcaseL
 
--- | Case analysis on a non-empty list.
+{- | Case analysis on a non-empty list.
+
+Equivalent type signature:
+
+@
+nonEmptyR :: forall a r. 'AnalysisR' (NonEmpty a) r
+@
+-}
 nonEmptyR :: forall a r. (a -> [a] -> r) -> NonEmpty a -> r
 nonEmptyR = gcaseR @(NonEmpty a)
 
--- | Same as 'nonEmptyR', except the non-empty list comes before the case function.
+{- | Same as 'nonEmptyR', except the non-empty list comes before the case function.
+
+Equivalent type signature:
+
+@
+nonEmptyL :: forall a r. 'AnalysisL' (NonEmpty a) r
+@
+-}
 nonEmptyL :: forall a r. NonEmpty a -> (a -> [a] -> r) -> r
 nonEmptyL = gcaseL
