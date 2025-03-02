@@ -97,8 +97,9 @@ module Generics.Case
 
     -- ** Tuples
   , tupleR
-  , tuple3R
   , tupleL
+  , tuple3R
+  , tuple3L
 
     -- ** Lists
   , listR
@@ -362,6 +363,17 @@ tupleL :: forall a b r. 'AnalysisL' (a, b) r
 -}
 tupleL :: forall a b r. (a, b) -> (a -> b -> r) -> r
 tupleL = gcaseL
+
+{- | Same as 'tuple3R', except the tuple comes before the case function.
+
+Equivalent type signature:
+
+@
+tupleL :: forall a b c r. 'AnalysisL' (a, b, c) r
+@
+-}
+tuple3L :: forall a b c r. (a, b, c) -> (a -> b -> c -> r) -> r
+tuple3L = gcaseL
 
 {- | Case analysis on a non-empty list.
 
