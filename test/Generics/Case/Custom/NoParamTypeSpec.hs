@@ -28,23 +28,20 @@ instance Q.Arbitrary NoParamType where
       ]
   shrink = Q.genericShrink
 
-type NPTFn r = r -> (Int -> r) -> (String -> Char -> r) -> NoParamType -> r
+type NPTFn r = NoParamType -> r -> (Int -> r) -> (String -> Char -> r) -> r
 
-type FunArgs r = '[r, Fun Int r, Fun String (Fun Char r), NoParamType]
+type FunArgs r = '[NoParamType, r, Fun Int r, Fun String (Fun Char r)]
 
 type NPTFun r = Chain (FunArgs r) r
 
 manual :: NPTFn r
-manual r fromInt fromStringChar = \case
+manual npt r fromInt fromStringChar = case npt of
   NPT1 -> r
   NPT2 int -> fromInt int
   NPT3 string char -> fromStringChar string char
 
-nptR :: NPTFn r
-nptR = gcaseR @NoParamType
-
-nptL :: NoParamType -> r -> (Int -> r) -> (String -> Char -> r) -> r
-nptL = gcaseL @NoParamType
+nptL :: NPTFn r
+nptL = gcase @NoParamType
 
 specNPT ::
   forall r.
@@ -63,22 +60,15 @@ specNPT name f =
 mkFn ::
   NPTFn r ->
   NPTFun r
-mkFn f r f1 f2 = f r (applyFun f1) (applyFun <$> applyFun f2)
-
-nptL_ :: NPTFn r
-nptL_ r fromInt fromStringChar npt = nptL npt r fromInt fromStringChar
+mkFn f npt' r f1 f2 = f npt' r (applyFun f1) (applyFun <$> applyFun f2)
 
 spec :: H.Spec
 spec = do
   H.describe "()" $ do
-    specNPT @() "nptR" nptR
-    specNPT @() "nptL" nptL_
+    specNPT @() "nptL" nptL
   H.describe "Char" $ do
-    specNPT @Char "nptR" nptR
-    specNPT @Char "nptL" nptL_
+    specNPT @Char "nptL" nptL
   H.describe "String" $ do
-    specNPT @String "nptR" nptR
-    specNPT @String "nptL" nptL_
+    specNPT @String "nptL" nptL
   H.describe "[Maybe (Int, String)]" $ do
-    specNPT @[Maybe (Int, String)] "nptR" nptR
-    specNPT @[Maybe (Int, String)] "nptL" nptL_
+    specNPT @[Maybe (Int, String)] "nptL" nptL

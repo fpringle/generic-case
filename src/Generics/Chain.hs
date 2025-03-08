@@ -1,3 +1,5 @@
+{-# LANGUAGE EmptyCase #-}
+
 {- | Uniform representation + handling of n-ary functions.
 
 This module gives us types and functions (both value- and type-level) to work
@@ -43,91 +45,50 @@ The 'Chain' family does exactly that. Since GHC can unify these types, we
 can use 'Chain' in our types signatures in "Generics.Case" and the user doesn't
 have to think about SOP, generics etc.
 
-However, it's hard to manipulate a 'Chain' in a generic way. We want a principled
-way to manipulate any function type, regardless of how many arguments it has.
-That's where [sop-core](https://hackage.haskell.org/package/sop-core) comes in.
-
-The second way to unify all function types is using uncurrying: rather than a series of
-function arrows, we see a function as mapping a tuple (or a heterogeneous list) to a result type:
-
 @
-f1_tuple :: (Int) -> Int
-f2_tuple :: (a, (b, a)) -> c
-f3_tuple :: (a, a -> a, a -> a -> a) -> a
+f1__ :: Chain '[Int] Int
+f1__ = f1_
+f2__ :: Chain '[a, (b, a)] c
+f2__ = f2_
+f3__ :: Chain '[a, a -> a, a -> a -> a] a
+f3__ = f3_
 @
 
-Or, in SOP terminology:
-
-@
-f1_NP_ :: NP '[Int] -> Int
-f2_NP_ :: NP '[a, (b, a)] -> c
-f3_NP_ :: NP '[a, a -> a, a -> a -> a] -> a
-@
-
-Since these types are equivalent, once we convert to the 'NP' representation we can then manipulate
-them using all the usual SOP machinery, and then convert back.
-The 'ChainF' type does exactly that, and the 'toChain' and 'fromChain' functions allow us to
-convert between the two representations on the value level:
-
-@
-f1_NP :: ChainF Int '[Int]
-f1_NP = fromChain f1
-f2_NP :: ChainF c '[a, (b, a)]
-f2_NP = fromChain f2
-f3_NP :: ChainF a '[a, a -> a, a -> a -> a]
-f3_NP = fromChain f3
-@
-
-Note that the argument list now comes after the result type: this is so that we can use 'ChainF'
-with 'NP' etc.
-
-Unlike 'Chain', 'ChainF' is a concrete type using SOP stuff. Ideally we don't want to expose
-it to the user and force them to supply functions that take 'NP's as arguments.
-
-'Chains' and @'NP' ('ChainF' r)@ iterate on these concepts: 'Chains' is a type-level family represent
-a function of functions, and @'NP' ('ChainF' r)@ is the SOP equivalent. We can convert between them
-using 'toChains' and 'fromChains'. This lets us represent "case analysis" functions like
+'Chains' iterates on this concepts: it is a type-level family representing
+a function of functions. This lets us represent "case analysis" functions like
 'maybe' and 'either' nicely (see "Generics.Case"):
 
 @
-maybe' :: forall a r. 'ChainsR' '[ '[], '[a]] (Maybe a) r
-maybe' = 'maybe'
+maybe' :: forall a r. Maybe a -> 'Chains' '[ '[], '[a]] r
+maybe' m r f = 'maybe' r f m
 
-either' :: forall a b r. 'ChainsR' '[ '[a], '[b]] (Either a b) r
-either' = 'either'
+either' :: forall a b r. Either a b -> 'Chains' '[ '[a], '[b]] r
+either' e fa fb = 'either' fa fb e
+
+bool' :: forall r. Bool -> 'Chains' '[ '[], '[]] r
+bool' b f t = 'Data.Bool.bool' f t b
 @
-
-'ChainsL' and 'ChainsR' are just variants of 'Chains' that allow us to decide whether the
-type we're analysing comes before or after the analysis functions.
 -}
 module Generics.Chain
-  ( -- * Type functions
+  ( -- * Representation of n-ary functions
     Chain
   , toChain
   , fromChain
-  , Chains
-  , toChains
-  , fromChains
-  , ChainsL
-  , toChainsL
-  , fromChainsL
-  , ChainsR
-  , toChainsR
-  , fromChainsR
 
-    -- * Concrete SOP types
-  , ChainF (..)
-  , applyChain
-  , applyNSChain
-  , chainFn
+    -- * Functions of functions
+  , Chains
+  , applyChains
+  , constChain
   )
 where
 
 import Data.SOP
-import Data.SOP.NP
-import Data.SOP.NS
 
-{- | Isomorphic to @ChainF r xs@, as witnessed by 'fromChain' and 'toChain'
+{- | Type family representing an n-ary function. The first argument is a type-level list
+that represent the arguments to the function; the second argument represents the result of
+the function.
+
+Isomorphic to @'NP' 'I' xs -> r@, as witnessed by 'fromChain' and 'toChain'.
 
 @
 Chain '[x, y, z] r
@@ -138,143 +99,96 @@ type family Chain xs r where
   Chain '[] r = r
   Chain (x ': xs) r = x -> Chain xs r
 
-{- | Convert from type family 'Chain' to concrete type 'ChainF'.
+{- | Convert from type family 'Chain' to a function of a product 'NP'.
 
 Inverse of 'toChain'.
 -}
-fromChain :: forall xs r. (SListI xs) => Chain xs r -> ChainF r xs
-fromChain sc = case sList @xs of
-  SNil -> ChainF (const sc)
-  SCons ->
-    ChainF $ \(I x :* xs) ->
-      let ChainF f = fromChain $ sc x
-      in  f xs
+fromChain :: forall xs r. Chain xs r -> NP I xs -> r
+fromChain c = \case
+  Nil -> c
+  I x :* xs -> fromChain (c x) xs
 
-{- | Convert from concrete type 'ChainF' to type family 'Chain'.
+{- | Convert from a function of a product, to type family 'Chain'.
 
 e.g.
 
 @
-chainF :: ChainF String '[Int, Maybe Char]
-chainF = ChainF $ \(I n :* I mChar :* Nil) -> show n <> " " <> show mChar
+productChain :: 'NP' 'I' '[Int, Maybe Char] -> String
+productChain ('I' n :* 'I' mChar :* Nil) = show n <> " " <> show mChar
 
-singleChain :: Int -> Maybe Char -> String
-singleChain = toChain chainF
+chain :: Int -> Maybe Char -> String
+chain = toChain productChain
 @
 -}
-toChain :: forall xs r. (SListI xs) => ChainF r xs -> Chain xs r
-toChain (ChainF f) = case sList @xs of
+toChain :: forall xs r. (SListI xs) => (NP I xs -> r) -> Chain xs r
+toChain f = case sList @xs of
   SNil -> f Nil
-  SCons -> \x -> toChain $ ChainF $ \xs -> f (I x :* xs)
+  SCons -> \x -> toChain $ \xs -> f (I x :* xs)
 
-{- | Isomorphic to @NP (ChainF final) xss -> ret@, as witnessed by 'toChains' and 'fromChains'.
-
-@
-Chains '[ '[x,y], '[z], '[]] ret final
-  ~ Chain '[x,y] final -> Chain '[z] final -> Chain '[] final -> ret
-  ~ (x -> y -> final)  -> (z -> final)     -> final           -> ret
-@
--}
-type family Chains xss ret final where
-  Chains '[] ret final = ret
-  Chains (xs ': xss) ret final = Chain xs final -> Chains xss ret final
-
-{- | Convert from a function of a product of concrete types 'ChainF' to type family 'Chains'.
-
-e.g.
+{- | The next level up from 'Chain': now we represent a function of functions.
 
 @
-maybeF :: NP (ChainF Int) '[ '[], '[Char]] -> Maybe Char -> Int
-maybeF (ChainF n :* _) Nothing = n Nil
-maybeF (_ :* ChainF f :* Nil) (Just c) = f (I c :* Nil)
-
-maybeR :: Int -> (Char -> Int) -> Maybe Char -> Int
-maybeR = toChains maybeF
-
-maybeL :: Maybe Char -> Int -> (Char -> Int) -> Int
-maybeL mc = toChains (flip maybeF mc)
-@
--}
-toChains ::
-  forall xss ret final.
-  (All SListI xss) =>
-  (NP (ChainF final) xss -> ret) ->
-  Chains xss ret final
-toChains f = case sList @xss of
-  SNil -> f Nil
-  SCons -> \sc -> toChains $ \xs -> f (fromChain sc :* xs)
-
-{- | Convert from type family 'Chains' to a function of a product of concrete types 'ChainF'.
-
-Inverse of 'toChains'.
--}
-fromChains ::
-  forall xss ret final.
-  (All SListI xss) =>
-  Chains xss ret final ->
-  NP (ChainF final) xss ->
-  ret
-fromChains r = \case
-  Nil -> r
-  sc :* cs -> fromChains (r $ toChain sc) cs
-
-{- | Isomorphic to @NP (ChainF r) xss -> a -> r@, as witnessed by 'toChainsR' and 'fromChainsR'.
-
-@
-ChainsR '[ '[x,y], '[z], '[]] a r
-  ~ Chain '[x,y] r -> Chain '[z] r -> Chain '[] r -> a -> r
-  ~ (x -> y -> r)  -> (z -> r)     -> r           -> a -> r
-@
--}
-type ChainsR xss a r = Chains xss (a -> r) r
-
--- | Specialisation of 'toChains' to 'ChainsR'.
-toChainsR :: forall xss a r. (All SListI xss) => (NP (ChainF r) xss -> a -> r) -> ChainsR xss a r
-toChainsR = toChains
-
--- | Specialisation of 'fromChains' to 'ChainsR'.
-fromChainsR :: forall xss a r. (All SListI xss) => ChainsR xss a r -> (NP (ChainF r) xss -> a -> r)
-fromChainsR = fromChains
-
-{- | Isomorphic to @NP (ChainF r) xss -> r@, as witnessed by 'toChainsL' and 'fromChainsL'.
-
-@
-ChainsL '[ '[x,y], '[z], '[]] r
+Chains '[ '[x,y], '[z], '[]] r
   ~ Chain '[x,y] r -> Chain '[z] r -> Chain '[] r -> r
   ~ (x -> y -> r)  -> (z -> r)     -> r           -> r
 @
+
+In an ideal world, we'd be able to write:
+
+@
+type Chains xss r = Chain (Map (\xs -> Chain xs r) xss) r
+@
 -}
-type ChainsL xss r = Chains xss r r
+type family Chains xss r where
+  Chains '[] r = r
+  Chains (xs ': xss) r = Chain xs r -> Chains xss r
 
--- | Specialisation of 'toChains' to 'ChainsL'.
-toChainsL :: forall xss r. (All SListI xss) => (NP (ChainF r) xss -> r) -> ChainsL xss r
-toChainsL = toChains
+{- | Apply a series of chains. Used to implement 'Generics.Case.gcase'.
 
--- | Specialisation of 'fromChains' to 'ChainsL'.
-fromChainsL :: forall xss r. (All SListI xss) => ChainsL xss r -> (NP (ChainF r) xss -> r)
-fromChainsL = fromChains
+You can think of the signature and implementation of this function as being:
 
-{- | A concrete type that is equivalent to an n-ary function.
-
-@ChainF r '[x, y, z]@ is isomorphic to @'Chain' '[x, y, z] r@, which simplifies to
-@x -> y -> z -> r@. This isomorphism is witnessed by 'toChain' and 'fromChain'
+@
+applyChains ::
+  'NS' ('NP' 'I') '[xs1, xs2, ... , xsn] ->
+  Chains xs1 r ->
+  Chains xs2 r ->
+  ... ->
+  Chains xsn r ->
+  r
+applyChains (Z x1)                 f1 _  _ ... _  = fromChain f1 xs
+applyChains (S (S x2)              _  f2 _ ... _  = fromChain f2 xs
+...
+applyChains (S (S (... (S xn)..))) _  _  _ ... fn = fromChain fn xs
+@
 -}
-newtype ChainF r xs = ChainF (NP I xs -> r)
-
--- | Unwrap a 'ChainF'.
-applyChain :: ChainF r xs -> NP I xs -> r
-applyChain (ChainF f) = f
-{-# INLINE applyChain #-}
-
-{- | Convert a 'ChainF' to a '-.->' function which maps a product of @xs@ to a single value @r@
-(more accurately @'K' r@).
--}
-chainFn :: ChainF r xs -> (NP I -.-> K r) xs
-chainFn = fn . (K .) . applyChain
-{-# INLINE chainFn #-}
-
--- | Apply a product of 'ChainF's to a __sum__ of 'NP's.
-applyNSChain :: forall r xss. (SListI xss) => NP (ChainF r) xss -> SOP I xss -> r
-applyNSChain chains (SOP ns) = collapse_NS $ ap_NS fns ns
+applyChains :: forall xss r. (SListI xss) => NS (NP I) xss -> Chains xss r
+applyChains = go shape
   where
-    fns = liftA_NP chainFn chains
+    go :: forall yss. Shape yss -> NS (NP I) yss -> Chains yss r
+    go = \case
+      ShapeNil -> \case {}
+      ShapeCons (shp :: Shape xs) -> \case
+        Z (npx :: NP I x) -> \cx -> constChain @_ @r (fromChain @x @r cx npx) shp
+        S (s :: NS (NP I) xs) -> \_ -> go shp s
+
+{- | Once we've hit the 'Z' and applied the correspond 'Chain', we've got our final answer and
+we want to skip the rest of the functions and just return. This lets us do that.
+
+You can think of the signature and implementation of this function (ignoring the 'Shape',
+which just helps GHC understand the recursion) as being:
+
+@
+applyChains ::
+  r ->
+  Chains xs1 r ->
+  Chains xs2 r ->
+  ... ->
+  Chains xsn r ->
+  r
+applyChains r _ _ ... _ = r
+@
+-}
+constChain :: forall xss r. r -> Shape xss -> Chains xss r
+constChain r = \case
+  ShapeNil -> r
+  ShapeCons s -> \_ -> constChain @_ @r r s
