@@ -9,7 +9,7 @@ and error-prone at worst. This module gives us these functions for any type whic
 implements 'Generic'.
 
 For any single-constructor types, such as tuples, this gives us generic uncurrying without
-any extra effort - see 'tupleR', 'tuple3R'.
+any extra effort - see 'tupleL', 'tuple3L'.
 
 == Example
 
@@ -33,15 +33,16 @@ instance Generic (These a b)      -- we could also do this using DeriveAnyClass
 
 We're going to re-implement the case analysis function
 [these](https://hackage.haskell.org/package/these-1.2.1/docs/Data-These.html#v:these),
-using 'gcaseR'. Our type has 3 constructors, so our function will have 4 arguments:
-one function for each constructor, and one for the @These@ we're analysing.
+using 'gcase'. Our type has 3 constructors, so our function will have 4 arguments:
+one for the @These@ we're analysing, and one function for each constructor.
 The function is polymorphic in the result type.
 
 @
 these ::
   forall a b c.
+  These a b ->
   _ -> _ -> _ ->
-  These a b -> c
+  c
 @
 
 What are the types of those 3 functions? For each constructor, we make a function type taking
@@ -50,63 +51,59 @@ one of each of the argument types, and returning our polymorphic result type @c@
 @
 these ::
   forall a b c.
+  These a b ->
   (a -> c) ->       -- for This
   (b -> c) ->       -- for That
   (a -> b -> c) ->  -- for These
-  These a b -> c
+  c
 @
 
-Finally, we add the implementation, which is just 'gcaseR':
+Finally, we add the implementation, which is just 'gcase':
 
 @
 these ::
   forall a b c.
+  These a b ->
   (a -> c) ->
   (b -> c) ->
   (a -> b -> c) ->
-  These a b -> c
-these = gcaseR @(These a b)
+  c
+these = gcase
 @
 
-Note that we need the @TypeApplications@ extension here. If you're really against this extension,
-see 'gcaseR_'.
+Note that we could have written the entire thing more succintly using 'Analysis':
 
-For a version that takes the datatype before the functions, see 'gcaseL'.
+@
+these ::
+  forall a b c.
+  Analysis (These a b) c
+these = gcase
+@
 -}
 module Generics.Case
   ( -- * Generic case analysis
-    AnalysisR
-  , gcaseR
-  , gcaseR_
-  , AnalysisL
-  , gcaseL
+    Analysis
+  , gcase
 
     -- * Examples
 
     -- ** Maybe
-  , maybeR
   , maybeL
 
     -- ** Either
-  , eitherR
   , eitherL
 
     -- ** Bool
-  , boolR
   , boolL
 
     -- ** Tuples
-  , tupleR
   , tupleL
-  , tuple3R
   , tuple3L
 
     -- ** Lists
-  , listR
   , listL
 
     -- ** Non-empty lists
-  , nonEmptyR
   , nonEmptyL
   )
 where
@@ -115,284 +112,129 @@ import Data.List.NonEmpty (NonEmpty)
 import Generics.Chain
 import Generics.SOP
 
-{- | The type of an analysis function on a generic type, in which the type comes after the functions.
+{- | The type of an analysis function on a generic type, in which the type comes before the functions.
 
-You shouldn't ever need to create a function of this type; use 'gcaseR' or 'gcaseR_'.
+You shouldn't ever need to create a function of this type manually; use 'gcase'.
 
 You can exapand the type in a repl:
 
 @
-ghci> :k! AnalysisR (Maybe a) r
-AnalysisR (Maybe a) r :: *
-= r -> (a -> r) -> Maybe a -> r
-@
--}
-type AnalysisR a r = ChainsR (Code a) a r
-
-{- | Same as 'AnalysisR', but the type being anlaysed comes before the functions.
-
-You shouldn't ever need to create a function of this type; use 'gcaseL'.
-
-@
-ghci> :k! AnalysisL (Maybe a) r
-AnalysisL (Maybe a) r :: *
+ghci> :k! Analysis (Maybe a) r
+Analysis (Maybe a) r :: *
 = Maybe a -> r -> (a -> r) -> r
 @
 -}
-type AnalysisL a r = a -> ChainsL (Code a) r
+type Analysis a r = a -> Chains (Code a) r
 
-{- | Generic case analysis, with the same shape as 'maybe' or 'either' (functions before dataype).
+{- | Generic case analysis. Similar to 'maybe' or 'either', except the type being analysed comes
+before the functions, instead of after.
 
 See the module header for a detailed explanation.
 -}
-gcaseR ::
+gcase ::
   forall a r.
   (Generic a) =>
-  AnalysisR a r
-gcaseR = toChains @(Code a) @(a -> r) f
-  where
-    f c a = applyNSChain c (from a)
-
-{- | Morally the same as 'gcaseR', but takes a 'Proxy' to avoid @TypeApplications@.
-
-Following our @These@ example:
-
-@
-these_ ::
-  forall a b c.
-  (a -> c) ->
-  (b -> c) ->
-  (a -> b -> c) ->
-  These a b -> c
-these_ = gcaseR_ (Proxy :: Proxy (These a b))
-@
--}
-gcaseR_ ::
-  forall a r.
-  (Generic a) =>
-  Proxy a ->
-  AnalysisR a r
-gcaseR_ _ = gcaseR @a @r
-
-{- | Simliar to 'gcaseR', except the type being analysed comes before the functions, instead of
-after.
-
-Unlike @gcaseR@, this shouldn't need @TypeApplications@.
-
-Following our @These@ example:
-
-@
-theseL ::
-  forall a b c.
-  These a b ->
-  (a -> c) ->
-  (b -> c) ->
-  (a -> b -> c) ->
-  c
-theseL = gcaseL
-@
--}
-gcaseL ::
-  forall a r.
-  (Generic a) =>
-  AnalysisL a r
-gcaseL a = toChains @(Code a) @r f
-  where
-    f c = applyNSChain c (from a)
+  Analysis a r
+gcase = applyChains @(Code a) @r . unSOP . from
 
 ------------------------------------------------------------
 -- Examples
 
-{- | 'maybe', implemented using 'gcaseR_'.
+{- | Same as 'maybe', except the 'Maybe' comes before the case functions.
 
 Equivalent type signature:
 
 @
-maybeR :: forall a r. 'AnalysisR' (Maybe a) r
+maybeL :: forall a r. Analysis (Maybe a) r
 @
 
 The implementation is just:
 
 @
-maybeR = gcaseR_ (Proxy :: Proxy (Maybe a))
-@
--}
-maybeR :: forall a r. r -> (a -> r) -> Maybe a -> r
-maybeR = gcaseR_ (Proxy :: Proxy (Maybe a))
-
-{- | Same as 'maybeR', except the 'Maybe' comes before the case functions.
-
-Equivalent type signature:
-
-@
-maybeL :: forall a r. AnalysisL (Maybe a) r
-@
-
-The implementation is just:
-
-@
-maybeL = gcaseL @(Maybe a)
+maybeL = gcase @(Maybe a)
 @
 -}
 maybeL :: forall a r. Maybe a -> r -> (a -> r) -> r
-maybeL = gcaseL
+maybeL = gcase
 
-{- | 'either', implemented using 'gcaseR'.
+{- | Same as 'either', except the 'Either' comes before the case functions.
 
 Equivalent type signature:
 
 @
-eitherR :: forall a b r. 'AnalysisR' (Either a b) r
+eitherL :: forall a b r. 'Analysis' (Either a b) r
 @
 
 The implementation is just:
 
 @
-eitherR = gcaseR @(Either a b)
-@
--}
-eitherR :: forall a b r. (a -> r) -> (b -> r) -> Either a b -> r
-eitherR = gcaseR @(Either a b)
-
-{- | Same as 'eitherR', except the 'Either' comes before the case functions.
-
-Equivalent type signature:
-
-@
-eitherL :: forall a b r. 'AnalysisL' (Either a b) r
-@
-
-The implementation is just:
-
-@
-eitherL = gcaseL
+eitherL = gcase
 @
 -}
 eitherL :: forall a b r. Either a b -> (a -> r) -> (b -> r) -> r
-eitherL = gcaseL
+eitherL = gcase
 
-{- | 'Data.Bool.bool', implemented using 'gcaseR'.
+{- | Same as 'Data.Bool.bool', except the 'Bool' comes before the case functions.
 
 Equivalent type signature:
 
 @
-boolR :: forall r. 'AnalysisR' Bool r
+boolL :: forall r. 'Analysis' Bool r
 @
 
 The implementation is just:
 
 @
-boolR = gcaseR @Bool
-@
--}
-boolR :: forall r. r -> r -> Bool -> r
-boolR = gcaseR @Bool
-
-{- | Same as 'boolR', except the 'Bool' comes before the case functions.
-
-Equivalent type signature:
-
-@
-boolL :: forall r. 'AnalysisL' Bool r
-@
-
-The implementation is just:
-
-@
-boolL = gcaseL
+boolL = gcase
 @
 -}
 boolL :: forall r. Bool -> r -> r -> r
-boolL = gcaseL
+boolL = gcase
 
 {- | Case analysis on a list. Same as
 [list](https://hackage.haskell.org/package/extra/docs/Data-List-Extra.html#v:list)
-from @extra@.
+from @extra@, except the list comes before the case functions.
 
 Equivalent type signature:
 
 @
-listR :: forall a r. 'AnalysisR' [a] r
-@
--}
-listR :: forall a r. r -> (a -> [a] -> r) -> [a] -> r
-listR = gcaseR @[a]
-
-{- | Same as 'listR', except the list comes before the case functions.
-
-Equivalent type signature:
-
-@
-listL :: forall a r. 'AnalysisL' [a] r
+listL :: forall a r. 'Analysis' [a] r
 @
 -}
 listL :: forall a r. [a] -> r -> (a -> [a] -> r) -> r
-listL = gcaseL
+listL = gcase
 
-{- | Case analysis on a tuple. Interestingly, this is the same as 'uncurry'.
-
-Equivalent type signature:
-
-@
-tupleR :: forall a b r. 'AnalysisR' (a, b) r
-@
--}
-tupleR :: forall a b r. (a -> b -> r) -> (a, b) -> r
-tupleR = gcaseR @(a, b)
-
-{- | Case analysis on a 3-tuple. Same as
-[uncurry3](https://hackage.haskell.org/package/extra/docs/Data-Tuple-Extra.html#v:uncurry3)
-from @extra@.
+{- | Case analysis on a tuple. Same as 'uncurry', except the tuple comes before the case function.
 
 Equivalent type signature:
 
 @
-tuple3R :: forall a b c r. 'AnalysisR' (a, b, c) r
-@
--}
-tuple3R :: forall a b c r. (a -> b -> c -> r) -> (a, b, c) -> r
-tuple3R = gcaseR @(a, b, c)
-
-{- | Same as 'tupleR', except the tuple comes before the case function.
-
-Equivalent type signature:
-
-@
-tupleL :: forall a b r. 'AnalysisL' (a, b) r
+tupleL :: forall a b r. 'Analysis' (a, b) r
 @
 -}
 tupleL :: forall a b r. (a, b) -> (a -> b -> r) -> r
-tupleL = gcaseL
+tupleL = gcase
 
-{- | Same as 'tuple3R', except the tuple comes before the case function.
+{- | Case analysis on a 3-tuple. Same as
+[uncurry3](https://hackage.haskell.org/package/extra/docs/Data-Tuple-Extra.html#v:uncurry3)
+from @extra@, except the tuple comes before the case function.
 
 Equivalent type signature:
 
 @
-tupleL :: forall a b c r. 'AnalysisL' (a, b, c) r
+tupleL :: forall a b c r. 'Analysis' (a, b, c) r
 @
 -}
 tuple3L :: forall a b c r. (a, b, c) -> (a -> b -> c -> r) -> r
-tuple3L = gcaseL
+tuple3L = gcase
 
 {- | Case analysis on a non-empty list.
 
 Equivalent type signature:
 
 @
-nonEmptyR :: forall a r. 'AnalysisR' (NonEmpty a) r
-@
--}
-nonEmptyR :: forall a r. (a -> [a] -> r) -> NonEmpty a -> r
-nonEmptyR = gcaseR @(NonEmpty a)
-
-{- | Same as 'nonEmptyR', except the non-empty list comes before the case function.
-
-Equivalent type signature:
-
-@
-nonEmptyL :: forall a r. 'AnalysisL' (NonEmpty a) r
+nonEmptyL :: forall a r. 'Analysis' (NonEmpty a) r
 @
 -}
 nonEmptyL :: forall a r. NonEmpty a -> (a -> [a] -> r) -> r
-nonEmptyL = gcaseL
+nonEmptyL = gcase
