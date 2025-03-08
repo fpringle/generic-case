@@ -7,11 +7,15 @@ import qualified Test.QuickCheck as Q
 import Test.QuickCheck.Function
 import Util
 
-type EitherFn a b r = (a -> r) -> (b -> r) -> Either a b -> r
+type EitherFn a b r = Either a b -> (a -> r) -> (b -> r) -> r
 
-type FunArgs a b r = '[Fun a r, Fun b r, Either a b]
+type FunArgs a b r = '[Either a b, Fun a r, Fun b r]
 
 type EitherFun a b r = Chain (FunArgs a b r) r
+
+manual :: EitherFn a b r
+manual (Left a) f _ = f a
+manual (Right b) _ g = g b
 
 specEither ::
   forall a b r.
@@ -32,28 +36,21 @@ specEither ::
   H.Spec
 specEither name f =
   specG @(FunArgs a b r)
-    ("either", mkFn either)
+    ("either", mkFn manual)
     (name, mkFn f)
 
 mkFn ::
   EitherFn a b r ->
   EitherFun a b r
-mkFn e f g = e (applyFun f) (applyFun g)
-
-eitherL_ :: EitherFn a b r
-eitherL_ f g e = eitherL e f g
+mkFn e x f g = e x (applyFun f) (applyFun g)
 
 spec :: H.Spec
 spec = do
   H.describe "Either () Char -> Char" $ do
-    specEither @() @Char @Char "eitherR" eitherR
-    specEither @() @Char @Char "eitherL" eitherL_
+    specEither @() @Char @Char "eitherL" eitherL
   H.describe "Either Char String -> Either String ()" $ do
-    specEither @Char @String @(Either String ()) "eitherR" eitherR
-    specEither @Char @String @(Either String ()) "eitherL" eitherL_
+    specEither @Char @String @(Either String ()) "eitherL" eitherL
   H.describe "Either String (Maybe Integer) -> (Int, Either Integer Int)" $ do
-    specEither @String @(Maybe Integer) @(Int, Either Integer Int) "eitherR" eitherR
-    specEither @String @(Maybe Integer) @(Int, Either Integer Int) "eitherL" eitherL_
+    specEither @String @(Maybe Integer) @(Int, Either Integer Int) "eitherL" eitherL
   H.describe "Either [Maybe (Int, String)] Int -> (Int, [Either (Maybe ()) String])" $ do
-    specEither @[Maybe (Int, String)] @Int @(Int, [Either (Maybe ()) String]) "eitherR" eitherR
-    specEither @(Maybe (Int, String)) @Int @(Int, [Either (Maybe ()) String]) "eitherL" eitherL_
+    specEither @(Maybe (Int, String)) @Int @(Int, [Either (Maybe ()) String]) "eitherL" eitherL

@@ -9,21 +9,23 @@ import qualified Test.Hspec as H
 import qualified Test.Hspec.QuickCheck as H
 import qualified Test.QuickCheck as Q
 
+newtype ChainF r xs = ChainF (NP I xs -> r)
+
 propG ::
   forall args r.
   (SListI args, All Show args, Eq r, Show r) =>
   (String, Chain args r) ->
   (String, Chain args r) ->
-  Chain args Q.Property
-propG (refName, refF) (name, f) =
-  toChain @args @Q.Property $ ChainF $ \args ->
-    let expected = applyChain (fromChain @args @r refF) args
-        actual = applyChain (fromChain f) args
-        argsS = unwords $ fmap ($ "") $ collapse_NP $ cmap_NP (Proxy @Show) (K . showsPrec 11 . unI) args
-        expS = unwords [refName, argsS, "=", show expected]
-        actS = unwords [name, argsS, "=", show actual]
-        s = unlines [expS, actS]
-    in  Q.counterexample s $ expected == actual
+  NP I args ->
+  Q.Property
+propG (refName, refF) (name, f) args =
+  let expected = fromChain @args @r refF args
+      actual = fromChain @args @r f args
+      argsS = unwords $ fmap ($ "") $ collapse_NP $ cmap_NP (Proxy @Show) (K . showsPrec 11 . unI) args
+      expS = unwords [refName, argsS, "=", show expected]
+      actS = unwords [name, argsS, "=", show actual]
+      s = unlines [expS, actS]
+  in  Q.counterexample s $ expected == actual
 
 testG ::
   forall args r.
@@ -31,7 +33,7 @@ testG ::
   (String, Chain args r) ->
   (String, Chain args r) ->
   Q.Property
-testG ref f = Q.property $ fromChain @args @Q.Property $ propG @args @r ref f
+testG ref f = Q.property @(ChainF Q.Property args) $ ChainF $ propG @args @r ref f
 
 specG ::
   forall args r.

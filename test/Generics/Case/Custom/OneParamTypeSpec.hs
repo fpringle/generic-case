@@ -28,23 +28,20 @@ instance (Q.Arbitrary a) => Q.Arbitrary (OneParamType a) where
       ]
   shrink = Q.genericShrink
 
-type OPTFn a r = (a -> r) -> (Maybe a -> r) -> (a -> a -> r) -> OneParamType a -> r
+type OPTFn a r = OneParamType a -> (a -> r) -> (Maybe a -> r) -> (a -> a -> r) -> r
 
-type FunArgs a r = '[Fun a r, Fun (Maybe a) r, Fun a (Fun a r), OneParamType a]
+type FunArgs a r = '[OneParamType a, Fun a r, Fun (Maybe a) r, Fun a (Fun a r)]
 
 type OPTFun a r = Chain (FunArgs a r) r
 
 manual :: OPTFn a r
-manual fromA fromM fromAs = \case
+manual opt fromA fromM fromAs = case opt of
   OPT1 a -> fromA a
   OPT2 m -> fromM m
   OPT3 a1 a2 -> fromAs a1 a2
 
-optR :: forall a r. OPTFn a r
-optR = gcaseR @(OneParamType a)
-
-optL :: forall a r. OneParamType a -> (a -> r) -> (Maybe a -> r) -> (a -> a -> r) -> r
-optL = gcaseL @(OneParamType a)
+gopt :: forall a r. OPTFn a r
+gopt = gcase @(OneParamType a)
 
 specOPT ::
   forall a r.
@@ -65,24 +62,18 @@ specOPT name f =
     (name, mkFn f)
 
 mkFn ::
+  forall a r.
   OPTFn a r ->
   OPTFun a r
-mkFn f f1 f2 f3 = f (applyFun f1) (applyFun f2) (applyFun <$> applyFun f3)
-
-optL_ :: OPTFn a r
-optL_ r fromInt fromStringChar opt = optL opt r fromInt fromStringChar
+mkFn f m f1 f2 f3 = f m (applyFun f1) (applyFun f2) (applyFun <$> applyFun f3)
 
 spec :: H.Spec
 spec = do
   H.describe "OneParamType () -> Char" $ do
-    specOPT @() @Char "optR" optR
-    specOPT @() @Char "optL" optL_
+    specOPT @() @Char "gopt" gopt
   H.describe "OneParamType Char -> Either String ()" $ do
-    specOPT @Char @(Either String ()) "optR" optR
-    specOPT @Char @(Either String ()) "optL" optL_
+    specOPT @Char @(Either String ()) "gopt" gopt
   H.describe "OneParamType String -> (Int, Either Integer Int)" $ do
-    specOPT @String @(Int, Either Integer Int) "optR" optR
-    specOPT @String @(Int, Either Integer Int) "optL" optL_
+    specOPT @String @(Int, Either Integer Int) "gopt" gopt
   H.describe "OneParamType [Maybe (Int, String)] -> (Int, [Either (Maybe ()) String])" $ do
-    specOPT @[Maybe (Int, String)] @(Int, [Either (Maybe ()) String]) "optR" optR
-    specOPT @[Maybe (Int, String)] @(Int, [Either (Maybe ()) String]) "optL" optL_
+    specOPT @[Maybe (Int, String)] @(Int, [Either (Maybe ()) String]) "gopt" gopt
