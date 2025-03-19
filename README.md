@@ -1,3 +1,5 @@
+[![Haskell CI](https://github.com/fpringle/generic-case/actions/workflows/haskell.yml/badge.svg)](https://github.com/fpringle/generic-case/actions/workflows/haskell.yml)
+
 # Generic case analysis functions
 
 "Case analysis" functions are those which take one function for each constructor of a sum type, examine a value of that type, and call the relevant function depending on which constructor was used to build that type. Examples include
