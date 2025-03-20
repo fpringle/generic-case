@@ -125,6 +125,21 @@ toChain f = case sList @xs of
   SNil -> f Nil
   SCons -> \x -> toChain $ \xs -> f (I x :* xs)
 
+{- | This type family generalises 'Chains' when we want the inner 'Chain's to have a different
+return type to the overall function.
+
+@
+Chains' '[ '[x,y], '[z], '[]] ret final
+  ~ Chain '[x,y] final -> Chain '[z] final -> Chain '[] final -> ret
+  ~ (x -> y -> final)  -> (z -> final)     -> final           -> ret
+@
+
+It's used to implement both 'Chains' and 'ChainsR'.
+-}
+type family Chains' xss ret final where
+  Chains' '[] ret final = ret
+  Chains' (xs ': xss) ret final = Chain xs final -> Chains' xss ret final
+
 {- | The next level up from 'Chain': now we represent a function of functions.
 
 @
@@ -139,9 +154,7 @@ In an ideal world, we'd be able to write:
 type Chains xss r = Chain (Map (\xs -> Chain xs r) xss) r
 @
 -}
-type family Chains xss r where
-  Chains '[] r = r
-  Chains (xs ': xss) r = Chain xs r -> Chains xss r
+type Chains xss r = Chains' xss r r
 
 {- | Apply a series of chains. Used to implement 'Generics.Case.gcase'.
 
