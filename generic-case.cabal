@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               generic-case
-version:            0.1.0.0
+version:            0.1.1.0
 synopsis:           Generic case analysis
 description:
   Generic case analysis in the vein of 'maybe', 'either' and 'bool',
