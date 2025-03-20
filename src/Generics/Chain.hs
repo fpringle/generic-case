@@ -68,6 +68,23 @@ either' e fa fb = 'either' fa fb e
 bool' :: forall r. Bool -> 'Chains' '[ '[], '[]] r
 bool' b f t = 'Data.Bool.bool' f t b
 @
+
+'ChainsR' does the same thing, but let us pass the datatype __after__ the functions,
+exactly matching the shape of 'maybe' and 'either':
+
+@
+maybe'' :: forall a r. 'ChainsR' '[ '[], '[a]] (Maybe a) r
+maybe'' = 'maybe'
+
+either'' :: forall a b r. 'ChainsR' '[ '[a], '[b]] (Either a b) r
+either'' = 'either'
+
+bool'' :: forall r. 'ChainsR' '[ '[], '[]] Bool r
+bool'' = 'Data.Bool.bool'
+@
+
+Both 'Chains' and 'ChainsR' are implemented using 'Chains'', and we can convert between them using
+'toChainsR' and 'fromChainsR'.
 -}
 module Generics.Chain
   ( -- * Representation of n-ary functions
@@ -79,6 +96,12 @@ module Generics.Chain
   , Chains
   , applyChains
   , constChain
+
+    -- * Flipped argument order
+  , ChainsR
+  , toChainsR
+  , fromChainsR
+  , Chains'
   )
 where
 
@@ -205,3 +228,56 @@ constChain :: forall xss r. r -> Shape xss -> Chains xss r
 constChain r = \case
   ShapeNil -> r
   ShapeCons s -> \_ -> constChain @_ @r r s
+
+{- | Isomorphic to @a -> Chains xss r@, as witnessed by 'toChainsR' and 'fromChainsR'.
+
+@
+ChainsR '[ '[x,y], '[z], '[]] a r
+  ~ Chain '[x,y] r -> Chain '[z] r -> Chain '[] r -> a -> r
+  ~ (x -> y -> r)  -> (z -> r)     -> r           -> a -> r
+@
+-}
+type ChainsR xss a r = Chains' xss (a -> r) r
+
+{- | Convert between different representations of second-order n-ary functions. Should be inverse to 'fromChainsR'.
+
+This will be used to convert from 'Generics.Case.Analysis' to 'Generics.Case.AnalysisR' in the implementation of
+'Generics.Case.gcaseR'.
+
+Morally we can think of this as:
+
+@
+toChainsR ::
+  ( a -> Chains xs1 r -> ... -> Chains xsn r -> r) ->
+  ( Chains xs1 r -> ... -> Chains xsn r -> a -> r)
+toChainsR f c1 c2 ... cn a = f a c1 c2 ... cn
+@
+
+Effectively, it's an n-ary generalisation of 'flip'.
+-}
+toChainsR :: forall xss a r. (SListI xss) => (a -> Chains xss r) -> ChainsR xss a r
+toChainsR = go $ shape @_ @xss
+  where
+    go :: forall yss. Shape yss -> (a -> Chains yss r) -> ChainsR yss a r
+    go = \case
+      ShapeNil -> id
+      ShapeCons sc -> \f c -> go sc (`f` c)
+
+{- | Convert between different representations of second-order n-ary functions. Should be inverse to 'toChainsR'.
+
+Again, we can think of this as an n-ary generalisation of 'flip', in the other direction:
+
+@
+fromChainsR ::
+  ( Chains xs1 r -> ... -> Chains xsn r -> a -> r) ->
+  ( a -> Chains xs1 r -> ... -> Chains xsn r -> r)
+fromChainsR f a c1 c2 ... cn = f c1 c2 ... cn a
+@
+-}
+fromChainsR :: forall xss a r. (SListI xss) => ChainsR xss a r -> (a -> Chains xss r)
+fromChainsR = go $ shape @_ @xss
+  where
+    go :: forall yss. Shape yss -> ChainsR yss a r -> (a -> Chains yss r)
+    go = \case
+      ShapeNil -> id
+      ShapeCons (sc :: Shape xs) -> \f a c -> go sc (f c) a
