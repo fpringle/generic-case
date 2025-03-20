@@ -79,11 +79,40 @@ these ::
   Analysis (These a b) c
 these = gcase
 @
+
+== Flipping the argument order
+
+'maybe', 'either' and 'Data.Bool.bool' have a slightly different shape to @these@: they take the datatype
+(@Maybe a@, @Either a b@ or @Bool@) after the case functions, whereas @these@ (and generally any
+analysis function implemented using 'gcase') takes the datatype as its first argument, followed by
+the case functions. This is due to the implementation, and is the recommended usage due to performance.
+However, you may want your function to follow the same pattern as 'maybe', since this is more ergonomic.
+In this case you can use 'AnalysisR' and 'gcaseR':
+
+@
+theseR ::
+  forall a b c.
+  (a -> c) ->
+  (b -> c) ->
+  (a -> b -> c) ->
+  These a b ->
+  c
+-- alternate signature: theseR :: forall a b c. AnalysisR (These a b) c
+theseR = gcaseR @(These a b)
+@
+
+Note that we need the @TypeApplications@ extension here. If you're really against this extension,
+see 'gcaseR_'.
 -}
 module Generics.Case
   ( -- * Generic case analysis
     Analysis
   , gcase
+
+    -- ** Flipped argument order
+  , AnalysisR
+  , gcaseR
+  , gcaseR_
 
     -- * Examples
 
@@ -136,6 +165,63 @@ gcase ::
   (Generic a) =>
   Analysis a r
 gcase = applyChains @(Code a) @r . unSOP . from
+
+{- | Same as 'Analysis', except that the type comes after the functions.
+
+You shouldn't ever need to create a function of this type; use 'gcaseR' or 'gcaseR_'.
+
+You can exapand the type in a repl:
+
+@
+ghci> :k! AnalysisR (Maybe a) r
+AnalysisR (Maybe a) r :: *
+= r -> (a -> r) -> Maybe a -> r
+@
+-}
+type AnalysisR a r = ChainsR (Code a) a r
+
+{- | Generic case analysis, with the same shape as 'maybe' or 'either'. In other words this is the same
+as 'gcase', except the datatype comes after the analysis functions.
+
+== Note
+
+This is undoubtedly more ergonomic, since it allows us to use partial application nicely:
+
+@
+let maybeToEither err = 'maybeR' (Left err) Right
+in  ...
+@
+
+However, this carries a slight performance impact. It will __always__ be faster to use 'gcase', so if
+performance is critical in your use-case, use that. Then again, if performance is __really__ critical,
+you'll always be better off writing your analysis function manually; or just pattern-matching directly.
+-}
+gcaseR ::
+  forall a r.
+  (Generic a) =>
+  AnalysisR a r
+gcaseR = toChainsR @(Code a) @a @r $ gcase @a @r
+
+{- | Morally the same as 'gcaseR', but takes a 'Proxy' to avoid @TypeApplications@.
+
+Following our @These@ example:
+
+@
+these_ ::
+  forall a b c.
+  (a -> c) ->
+  (b -> c) ->
+  (a -> b -> c) ->
+  These a b -> c
+these_ = gcaseR_ (Proxy :: Proxy (These a b))
+@
+-}
+gcaseR_ ::
+  forall a r.
+  (Generic a) =>
+  Proxy a ->
+  AnalysisR a r
+gcaseR_ _ = gcaseR @a @r
 
 ------------------------------------------------------------
 -- Examples
