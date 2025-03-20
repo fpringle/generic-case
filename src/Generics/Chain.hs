@@ -54,7 +54,7 @@ f3__ :: Chain '[a, a -> a, a -> a -> a] a
 f3__ = f3_
 @
 
-'Chains' iterates on this concepts: it is a type-level family representing
+'Chains' iterates on this concept: it is a type-level family representing
 a function of functions. This lets us represent "case analysis" functions like
 'maybe' and 'either' nicely (see "Generics.Case"):
 
@@ -191,14 +191,14 @@ You can think of the signature and implementation of this function (ignoring the
 which just helps GHC understand the recursion) as being:
 
 @
-applyChains ::
+constChain ::
   r ->
   Chains xs1 r ->
   Chains xs2 r ->
   ... ->
   Chains xsn r ->
   r
-applyChains r _ _ ... _ = r
+constChain r _ _ ... _ = r
 @
 -}
 constChain :: forall xss r. r -> Shape xss -> Chains xss r

@@ -222,7 +222,7 @@ from @extra@, except the tuple comes before the case function.
 Equivalent type signature:
 
 @
-tupleL :: forall a b c r. 'Analysis' (a, b, c) r
+tuple3L :: forall a b c r. 'Analysis' (a, b, c) r
 @
 -}
 tuple3L :: forall a b c r. (a, b, c) -> (a -> b -> c -> r) -> r
