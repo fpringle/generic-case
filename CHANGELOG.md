@@ -25,7 +25,7 @@ and this project adheres to [Haskell Package Versioning Policy](https://pvp.hask
 
 - First version. Released on an unsuspecting world.
 
-[unreleased]: https://github.com/fpringle/servant-routes/compare/v0.1.1.1...HEAD
-[0.1.1.1]: https://github.com/fpringle/servant-routes/releases/tag/v0.1.1.1
-[0.1.1.0]: https://github.com/fpringle/servant-routes/releases/tag/v0.1.1.0
-[0.1.0.0]: https://github.com/fpringle/servant-routes/releases/tag/v0.1.0.0
+[unreleased]: https://github.com/fpringle/generic-case/compare/v0.1.1.1...HEAD
+[0.1.1.1]: https://github.com/fpringle/generic-case/releases/tag/v0.1.1.1
+[0.1.1.0]: https://github.com/fpringle/generic-case/releases/tag/v0.1.1.0
+[0.1.0.0]: https://github.com/fpringle/generic-case/releases/tag/v0.1.0.0
